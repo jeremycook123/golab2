@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	//including gorilla mux and handlers packages for HTTP routing and CORS support
@@ -106,9 +107,23 @@ func voteonlanguage(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Println("incoming vote for: " + name)
 
-	votesUpdated := UpdateVote(c, bson.M{"name": name})
+	//votesUpdated := UpdateVote(c, bson.M{"name": name})
+	vchan := voteChannel()
+	vchan <- name
+	votesUpdated := <-vchan
 
-	_ = json.NewEncoder(w).Encode(fmt.Sprintf("{'count' : %d}", votesUpdated))
+	_ = json.NewEncoder(w).Encode(fmt.Sprintf("{'count' : %s}", votesUpdated))
+}
+
+func voteChannel() (vchan chan string) {
+	vchan = make(chan string)
+	go func() {
+		name := <-vchan
+		fmt.Println(fmt.Sprintf("name is %s", name))
+		votesUpdated := strconv.FormatInt((UpdateVote(c, bson.M{"name": name})), 10)
+		vchan <- votesUpdated
+	}()
+	return vchan
 }
 
 func ReturnAllLanguages(client *mongo.Client, filter bson.M) []*language {
