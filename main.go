@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"encoding/json"
 	"log"
@@ -43,6 +44,8 @@ func createlanguage(w http.ResponseWriter, req *http.Request) {
 	_ = json.NewDecoder(req.Body).Decode(&detail)
 	name := strings.ToLower(params["name"])
 
+	fmt.Println(fmt.Sprintf("POST api call made to /languages/%s", name))
+
 	lang := language{name, detail}
 
 	id := InsertNewLanguage(c, lang)
@@ -60,6 +63,8 @@ func createlanguage(w http.ResponseWriter, req *http.Request) {
 }
 
 func getlanguages(w http.ResponseWriter, _ *http.Request) {
+	fmt.Println("GET api call made to /languages")
+
 	var langmap = make(map[string]*codedetail)
 	langs := ReturnAllLanguages(c, bson.M{})
 	for _, lang := range langs {
@@ -76,6 +81,8 @@ func getlanguages(w http.ResponseWriter, _ *http.Request) {
 func getlanguagebyname(w http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 	name := strings.ToLower(params["name"])
+
+	fmt.Println(fmt.Sprintf("GET api call made to /languages/%s", name))
 
 	lang := ReturnOneLanguage(c, bson.M{"name": name})
 	if lang == nil {
@@ -94,6 +101,8 @@ func deletelanguagebyname(w http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 	name := strings.ToLower(params["name"])
 
+	fmt.Println(fmt.Sprintf("DELETE api call made to /languages/%s", name))
+
 	languagesRemoved := RemoveOneLanguage(c, bson.M{"name": name})
 
 	_ = json.NewEncoder(w).Encode(fmt.Sprintf("{'count' : %d}", languagesRemoved))
@@ -105,12 +114,13 @@ func voteonlanguage(w http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 	name := strings.ToLower(params["name"])
 
-	fmt.Println("incoming vote for: " + name)
+	fmt.Println(fmt.Sprintf("GET api call made to /languages/%s/vote", name))
 
 	//votesUpdated := UpdateVote(c, bson.M{"name": name})
 	vchan := voteChannel()
 	vchan <- name
 	votesUpdated := <-vchan
+	close(vchan)
 
 	_ = json.NewEncoder(w).Encode(fmt.Sprintf("{'count' : %s}", votesUpdated))
 }
@@ -119,7 +129,7 @@ func voteChannel() (vchan chan string) {
 	vchan = make(chan string)
 	go func() {
 		name := <-vchan
-		fmt.Println(fmt.Sprintf("name is %s", name))
+		//fmt.Println(fmt.Sprintf("name is %s", name))
 		votesUpdated := strconv.FormatInt((UpdateVote(c, bson.M{"name": name})), 10)
 		vchan <- votesUpdated
 	}()
@@ -189,8 +199,12 @@ func UpdateVote(client *mongo.Client, filter bson.M) int64 {
 
 //GetClient returns a MongoDB Client
 func GetClient() *mongo.Client {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongohost := getEnv("MONGO_HOST", "localhost")
+	mongoport := getEnv("MONGO_PORT", "27017")
+
+	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s", mongohost, mongoport))
 	client, err := mongo.NewClient(clientOptions)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -209,6 +223,14 @@ func init() {
 	} else {
 		log.Println("Connected!")
 	}
+}
+
+func getEnv(key, fallback string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		value = fallback
+	}
+	return value
 }
 
 func main() {
