@@ -234,7 +234,8 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
-	fmt.Println("serving on port 8080!!")
+	fmt.Println("version 1.00")
+	fmt.Println("serving on port 8080...")
 
 	router := mux.NewRouter()
 
