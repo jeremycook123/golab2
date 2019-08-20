@@ -23,17 +23,17 @@ import (
 )
 
 type codedetail struct {
-	Usecase  string `bson:"usecase,omitempty"`
-	Rank     int    `bson:"rank,omitempty"`
-	Compiled bool   `bson:"compiled"`
-	Homepage string `bson:"homepage,omitempty"`
-	Download string `bson:"download,omitempty"`
-	Votes    int    `bson:"votes"`
+	Usecase  string `json:"usecase,omitempty" bson:"usecase"`
+	Rank     int    `json:"rank,omitempty" bson:"rank"`
+	Compiled bool   `json:"compiled" bson:"compiled"`
+	Homepage string `json:"homepage,omitempty" bson:"homepage"`
+	Download string `json:"download,omitempty" bson:"download"`
+	Votes    int    `json:"votes" bson:"votes"`
 }
 
 type language struct {
-	Name   string     `bson:"name,omitempty"`
-	Detail codedetail `bson:"codedetail,omitempty"`
+	Name   string     `json:"name,omitempty" bson:"name"`
+	Detail codedetail `json:"codedetail,omitempty" bson:"codedetail"`
 }
 
 var c *mongo.Client
@@ -199,10 +199,11 @@ func UpdateVote(client *mongo.Client, filter bson.M) int64 {
 
 //GetClient returns a MongoDB Client
 func GetClient() *mongo.Client {
-	mongohost := getEnv("MONGO_HOST", "localhost")
-	mongoport := getEnv("MONGO_PORT", "27017")
+	mongoconnstr := getEnv("MONGO_CONN_STR", "mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/languages")
+    fmt.Println("mongoconnstr:")
+    fmt.Println(mongoconnstr)
 
-	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s", mongohost, mongoport))
+	clientOptions := options.Client().ApplyURI(mongoconnstr)
 	client, err := mongo.NewClient(clientOptions)
 
 	if err != nil {
@@ -225,6 +226,12 @@ func init() {
 	}
 }
 
+func test(w http.ResponseWriter, req *http.Request) {
+    fmt.Fprintf(w, "test hit!!")
+	return
+}
+
+
 func getEnv(key, fallback string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
@@ -244,6 +251,7 @@ func main() {
 	router.HandleFunc("/languages/{name}", getlanguagebyname).Methods("GET")
 	router.HandleFunc("/languages/{name}", deletelanguagebyname).Methods("DELETE")
 	router.HandleFunc("/languages/{name}/vote", voteonlanguage).Methods("GET")
+    router.HandleFunc("/languages/test", test).Methods("GET")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
