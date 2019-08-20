@@ -1,0 +1,13 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+spec:
+ rules:
+ - host: frontend.35.161.240.53.nip.io
+   http:
+     paths:
+     - path: /
+       backend:
+         serviceName: frontendservice
+         servicePort: 80
