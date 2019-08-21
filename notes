@@ -1,0 +1,65 @@
+https://codelabs.developers.google.com/codelabs/cloud-mongodb-statefulset/index.html?index=..%2F..index#8
+
+==============================
+
+wget https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.12.7.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin:${HOME}/go/bin' >> ~/.bashrc
+source ~/.bashrc
+go get -v -t -d ./...
+
+==============================
+
+kubectl create -f https://k8s.io/examples/admin/dns/busybox.yaml
+
+==============================
+
+use langdb
+db.languages.insert({"name" : "go", "codedetail" : { "usecase" : "system, web, server-side", "rank" : 16, "compiled" : true, "homepage" : "https://golang.org", "download" : "https://golang.org/dl/", "votes" : 0}})
+db.languages.insert({"name" : "java", "codedetail" : { "usecase" : "system, web, server-side", "rank" : 2, "compiled" : true, "homepage" : "https://www.java.com/en/", "download" : "https://www.java.com/en/download/", "votes" : 0}})
+db.languages.insert({"name" : "nodejs", "codedetail" : { "usecase" : "system, web, server-side", "rank" : 30, "compiled" : false, "homepage" : "https://nodejs.org/en/", "download" : "https://nodejs.org/en/download/", "votes" : 0}})
+
+==============================
+
+https://stefanprodan.com/2018/mgob-kubernetes-gke-guide/
+
+kubectl run -it --rm --restart=Never mongo-cli --image=mongo --command -- /bin/bash
+    mongo "mongodb://mongod-0.mongo:27017/languages"
+
+kubectl run -it --rm --restart=Never api --image=cloudacademy/api:latest --bash
+
+==============================
+
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o api
+docker build -t cloudacademy/api:latest .
+kubectl run --restart=Never api --image-pull-policy IfNotPresent --image=cloudacademy/api:latest
+
+kubectl logs api
+mongoconnstr:
+mongodb://mongod-0.mongo:27017
+2019/08/19 23:54:44 Connected!
+version 1.00
+serving on port 8080...
+
+==============================
+
+kubectl logs --follow api-794c5457c5-scw74
+
+==============================
+
+after shutdown/restart
+MONGO
+kubectl exec -it mongo-0 mongo
+var cfg = rs.conf();
+cfg.members = [cfg.members[0] , cfg.members[1] , cfg.members[2]]
+rs.reconfig(cfg, {force : true})
+rs.status()
+kubectl delete pods api-xxx api-xxx
+kubectl logs api-xxx api-xxx
+
+==============================
+
+db.createUser({user: "admin",
+pwd: "password",
+roles:[{role: "userAdmin" , db:"langdb"}]
+})
